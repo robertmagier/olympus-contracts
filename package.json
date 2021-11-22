@@ -7,6 +7,9 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.4.0",
+    "@uniswap/lib": "^4.0.1-alpha",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "bignumber.js": "^9.0.1"
   },
   "devDependencies": {
@@ -22,6 +25,7 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.1",
     "hardhat": "^2.5.0",
+    "hardhat-deploy": "^0.9.10",
     "prettier": "^2.3.2",
     "prettier-plugin-solidity": "^1.0.0-beta.17",
     "solhint": "^3.3.6",

@@ -7,7 +7,7 @@ const ZEROA = "0x0000000000000000000000000000000000000000";
 const AMOUNT = "10000000000000";
 import { BigNumber } from "bignumber.js";
 
-describe("Simple Staking", () => {
+describe("Staking Scenario", () => {
   let deployer: any,
     user1: any,
     OHM,
