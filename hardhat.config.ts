@@ -1,8 +1,11 @@
-import "@typechain/hardhat";
-import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
+import { HardhatUserConfig } from "hardhat/types";
 
 export default {
+  namedAccounts: {
+    deployer: 0,
+    tokenOwner: 1,
+  },
   solidity: {
     compilers: [
       {
@@ -39,6 +42,7 @@ export default {
     cache: "./cache",
     sources: "./contracts",
     tests: "./test",
+    imports: "./imports",
   },
   typechain: {
     outDir: "types",

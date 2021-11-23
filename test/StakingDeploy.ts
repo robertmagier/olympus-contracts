@@ -36,7 +36,9 @@ describe("Deploy contract for Staking", () => {
     calculator: any,
     weth: any,
     UNIROUTER: any,
-    unirouter: any;
+    unirouter: any,
+    UniswapV2Library: any,
+    uniswapv2library: any;
 
   let staker1: any, staker2: any;
   let StakingHelper: any, shelper: any;
@@ -44,6 +46,7 @@ describe("Deploy contract for Staking", () => {
   it("Get signers", async () => {
     [deployer, user1, staker1, staker2] = await ethers.getSigners();
   });
+
   it("Deploy tokens", async () => {
     //Total supply at 1000 000
     let totalSupply: any = new BigNumber(1000000).shiftedBy(18).toFixed(0);
@@ -83,6 +86,7 @@ describe("Deploy contract for Staking", () => {
     // Create Pair
     await uniswapfactory.createPair(ohm.address, dai.address);
     let pair = await uniswapfactory.getPair(ohm.address, dai.address);
+    console.log("Pair:", pair);
     let UNISWAPPAIR = await ethers.getContractFactory("UniswapPair");
     // Attach to pair
     ohmdai = UNISWAPPAIR.attach(pair);
@@ -90,27 +94,43 @@ describe("Deploy contract for Staking", () => {
   });
 
   it("DEPLOY UNISWAP ROUTER", async () => {
+    // const LIB = await ethers.getContractFactory("UniswapV2Library");
+    // const lib = await hre.deployments.deploy("UniswapV2Library", {
+    //   from: deployer.address,
+    //   log: true,
+    // });
+    // let options: any = {
+    //   libraries: {
+    //     UniswapV2Library: lib.address,
+    //   },
+    // };
+
     UNIROUTER = await ethers.getContractFactory("UniswapRouter");
     unirouter = await UNIROUTER.deploy(uniswapfactory.address, weth.address);
-  });
 
+    // await deployments.fixture(["UniswapRouter"]);
+
+    // const Token = await ethers.getContract("UniswapRouter");
+    // unirouter = Token;
+  });
   it("Add liquidity to ohmdai", async () => {
     let deadline = (Date.now() / 1000 + 60).toFixed(0);
 
-    await ohm.approve(unirouter.address, 100);
-    await dai.approve(unirouter.address, 100);
+    await ohm.approve(unirouter.address, 100000);
+    await dai.approve(unirouter.address, 100000);
+    await frax.approve(unirouter.address, 100000);
+    await ohm.mint(deployer.address, 100000);
     await unirouter.addLiquidity(
-      ohm.address,
       dai.address,
-      100,
-      100,
-      100,
-      100,
+      ohm.address,
+      10000,
+      10000,
+      10000,
+      10000,
       deployer.address,
       deadline
     );
   });
-  return;
 
   it("Deploy Treasury", async () => {
     let blocksNeededForQueue = 1;
@@ -240,11 +260,12 @@ describe("Deploy contract for Staking", () => {
   });
 
   it("Increase total reserves by 100 on each reserve and LP token", async () => {
-    let amount = 100;
+    let amount = Math.pow(10, 18).toString();
     await dai.transfer(treasury.address, amount);
     expect(await treasury.totalReserves()).to.be.equal(0);
     await treasury.auditReserves();
-    expect(await treasury.totalReserves()).to.be.equal(amount);
+    let expected = Math.pow(10, 9);
+    expect(await treasury.totalReserves()).to.be.equal(expected.toString());
   });
 
   return;
