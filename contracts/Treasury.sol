@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
+import "hardhat/console.sol";
 
 library SafeMath {
 
@@ -438,6 +439,10 @@ contract OlympusTreasury is Ownable {
         @return uint
      */
     function excessReserves() public view returns ( uint ) {
+        // console.log('Total debt:',totalDebt);
+        // console.log('totalReserves:',totalReserves);
+        // console.log('totalSupply:',IERC20( OHM ).totalSupply());
+        
         return totalReserves.sub( IERC20( OHM ).totalSupply().sub( totalDebt ) );
     }
 

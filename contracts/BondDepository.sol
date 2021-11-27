@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
-
+import "hardhat/console.sol";
 interface IOwnable {
   function policy() external view returns (address);
 
@@ -816,7 +816,7 @@ contract OlympusBondDepository is Ownable {
         address _depositor
     ) external returns ( uint ) {
         require( _depositor != address(0), "Invalid address" );
-
+        console.log('Debt:',totalDebt);
         decayDebt();
         require( totalDebt <= terms.maxDebt, "Max capacity reached" );
         
@@ -828,11 +828,18 @@ contract OlympusBondDepository is Ownable {
         uint value = ITreasury( treasury ).valueOf( principle, _amount );
         uint payout = payoutFor( value ); // payout to bonder is computed
 
+        console.log('Payout:',payout);
+        console.log('Min:   ',10000000);
+        console.log('Max:   ',maxPayout());
+
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
 
         // profits are calculated
         uint fee = payout.mul( terms.fee ).div( 10000 );
+        console.log('Value: ',value);
+        console.log('Payout:',payout);
+        console.log('Fee:   ',fee);
         uint profit = value.sub( payout ).sub( fee );
 
         /**
@@ -975,7 +982,15 @@ contract OlympusBondDepository is Ownable {
      *  @return uint
      */
     function payoutFor( uint _value ) public view returns ( uint ) {
-        return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e16 );
+        console.log('Total Debt:',totalDebt);
+        uint pay = FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e16 );
+        console.log('Payout:',pay);
+        console.log('Value:',_value);
+        console.log('bondPrice:',bondPrice());
+        console.log('Debt Ratio:',debtRatio());
+        console.log('Total Debt:',totalDebt);
+        console.log('Total Supply:',IERC20( OHM ).totalSupply());
+        return pay;
     }
 
 

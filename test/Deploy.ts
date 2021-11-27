@@ -49,7 +49,7 @@ describe("Deploy contract for Staking", () => {
 
   it("Deploy tokens", async () => {
     //Total supply at 1000 000
-    let totalSupply: any = new BigNumber(1000000).shiftedBy(18).toFixed(0);
+    let totalSupply: any = new BigNumber(10).shiftedBy(36).toFixed(0);
     ERC20TOKEN = await ethers.getContractFactory("SimpleToken");
     dai = await ERC20TOKEN.deploy("DAI", "DAI", totalSupply);
     weth = await ERC20TOKEN.deploy("WETH", "WETH", totalSupply);
@@ -115,18 +115,18 @@ describe("Deploy contract for Staking", () => {
   });
   it("Add liquidity to ohmdai", async () => {
     let deadline = (Date.now() / 1000 + 60).toFixed(0);
-
-    await ohm.approve(unirouter.address, 100000);
-    await dai.approve(unirouter.address, 100000);
-    await frax.approve(unirouter.address, 100000);
-    await ohm.mint(deployer.address, 100000);
+    let amount0 = new BigNumber(10).shiftedBy(32).times(1).toFixed();
+    let amount1 = new BigNumber(10).shiftedBy(11).times(5).toFixed();
+    await dai.approve(unirouter.address, amount0);
+    await ohm.approve(unirouter.address, amount1);
+    await ohm.mint(deployer.address, amount1);
     await unirouter.addLiquidity(
       dai.address,
       ohm.address,
-      10000,
-      10000,
-      10000,
-      10000,
+      amount0,
+      amount1,
+      amount0,
+      amount1,
       deployer.address,
       deadline
     );
@@ -148,6 +148,8 @@ describe("Deploy contract for Staking", () => {
     expect(reserveToken0).to.be.equal(dai.address);
     expect(reserveToken1).to.be.equal(frax.address);
     expect(liquidityToken0).to.be.equal(ohmdai.address);
+    let amount1 = new BigNumber(10).shiftedBy(11).times(5).toFixed();
+    await ohm.mint(treasury.address, amount1);
   });
 
   it("Set bonding calculator for LP ohmdai", async () => {
@@ -268,86 +270,59 @@ describe("Deploy contract for Staking", () => {
     expect(await treasury.totalReserves()).to.be.equal(expected.toString());
   });
 
-  return;
+  it("Deploy OlympusBondDepository", async () => {
+    let factory = await ethers.getContractFactory(
+      "contracts/BondDepository.sol:OlympusBondDepository"
+    );
+    let instance = await factory.deploy(
+      ohm.address,
+      ohmdai.address,
+      treasury.address,
+      deployer.address,
+      calculator.address
+    );
 
-  before(async () => {
-    let block, epoch, firstEpoch;
-    let amount: any = new BigNumber(1000000).shiftedBy(18).toFixed(0);
+    const LP_DEPOSITOR = 4;
+    await treasury.queue(LP_DEPOSITOR, instance.address);
+    await treasury.toggle(LP_DEPOSITOR, instance.address, ZEROA);
 
-    await dai.transfer(treasury.address, amount);
-    await treasury.auditReserves();
+    console.log("Address:", instance.address);
+    await instance.setStaking(shelper.address, true);
 
-    // await ohm.setVault(treasury.address);
-    await ohm.setVault(deployer.address);
+    let controlVariable = 306;
+    let vestingTerm = 2000;
+    let minimumPrice = 1;
+    let maxPayout = 1000;
+    let fee = 1000;
+    let maxDebt = 33000000000000;
+    let initialDebt = new BigNumber("33000000000000").toString();
+    await instance.initializeBondTerms(
+      controlVariable,
+      vestingTerm,
+      minimumPrice,
+      maxPayout,
+      fee,
+      maxDebt,
+      initialDebt
+    );
 
-    console.log("Staking addr:", staking.address);
-  });
+    let debt = await instance.totalDebt();
+    console.log("Debt:", debt.toString());
 
-  it("Mint OHM for staker1", async () => {
-    // await ohm.mint(staking.address, (parseInt(AMOUNT) * 20).toString());
+    let bondPrice = await instance.bondPrice();
+    console.log(bondPrice.toString());
 
-    let balance = await ohm.balanceOf(staker1.address);
-    expect(balance).to.be.equal((2 * parseInt(AMOUNT)).toString());
-  });
+    let reserves = await ohmdai.getReserves();
+    console.log("Reserves: ", reserves.toString());
 
-  it("Check sOHM Balance", async () => {
-    let balance = await sohm.balanceOf(staker1.address);
-    expect(balance).to.be.equal("0");
-  });
+    let bondPriceUSD = await instance.bondPriceInUSD();
+    console.log(bondPriceUSD.toString());
 
-  it("Stake 100 OHM", async () => {
-    let epoch = await staking.epoch();
-    console.log({ epoch: epoch.number.toString() });
-    await ohm.connect(staker1).increaseAllowance(shelper.address, AMOUNT);
-    await ohm.connect(staker2).increaseAllowance(shelper.address, AMOUNT);
+    let lpBalance = await ohmdai.balanceOf(deployer.address);
+    console.log("LpBalance:", lpBalance.toString());
 
-    let tx = await ohm
-      .connect(staker1)
-      .increaseAllowance(shelper.address, AMOUNT);
-    await tx.wait();
-    tx = await shelper.connect(staker1).stake(AMOUNT);
-    let sohmBalance = await sohm.balanceOf(staker1.address);
-    expect(sohmBalance).to.be.equal(AMOUNT);
-    tx = await shelper.connect(staker2).stake(AMOUNT);
-    await tx.wait();
-    console.log(sohmBalance);
-    let index = await staking.index();
-    console.log("Index:", index.toString());
-  });
-
-  // it("Wait 1 seconds", (done) => {
-  //   setTimeout(() => {
-  //     console.log("Done");
-  //     done();
-  //   }, 15000);
-  // });
-  it("Check balance after 5 epochs", async () => {
-    await staking.rebase();
-    let index = await staking.index();
-    console.log("Index:", index.toString());
-
-    // let rebase = await sohm.rebases(0);
-    // console.log(rebase);
-    // rebase = await sohm.rebases(1);
-    // console.log(rebase);
-    // rebase = await sohm.rebases(2);
-    // console.log(rebase);
-    // rebase = await sohm.rebases(3);
-    // console.log(rebase);
-    // rebase = await sohm.rebases(4);
-    // console.log(rebase);
-
-    let tx = await shelper.connect(staker1).stake(AMOUNT);
-    await tx.wait();
-    index = await staking.index();
-    console.log("Index:", index.toString());
-    let sohmBalance = await sohm.balanceOf(staker1.address);
-    console.log("Balance:", sohmBalance.toString());
-    sohmBalance = await sohm.balanceOf(staker2.address);
-    console.log("Balance:", sohmBalance.toString());
-    let epoch = await staking.epoch();
-    console.log({ epoch: epoch.number.toString() });
-    tx = await staking.rebase();
-    await tx.wait();
+    let amount = new BigNumber(10).shiftedBy(14).toFixed();
+    await ohmdai.approve(instance.address, amount);
+    await instance.deposit(amount, bondPrice, deployer.address);
   });
 });

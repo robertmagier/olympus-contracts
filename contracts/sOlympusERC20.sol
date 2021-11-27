@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
+import "hardhat/console.sol";
 
 
 /**
@@ -1031,7 +1032,7 @@ contract sOlympus is ERC20Permit, Ownable {
 
     mapping ( address => mapping ( address => uint256 ) ) private _allowedValue;
 
-    constructor() ERC20("Staked Olympus", "sOHM", 9) ERC20Permit() {
+    constructor() ERC20("Staked RUSH", "sRUSH", 9) ERC20Permit() {
         initializer = msg.sender;
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);

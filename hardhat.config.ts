@@ -52,7 +52,17 @@ export default {
     hardhat: {
       mining: {
         auto: true,
+        // interval: 1000,
       },
+    },
+    rinkeby: {
+      url:
+        "https://eth-rinkeby.alchemyapi.io/v2/tW4xcBCbivAL17g0-5quQ3O9877jc76P",
+      accounts: [
+        "0xebd6ed48f7f287edfbcd12c31cb5b15fa0de29a0bf150316757025fa422a30af",
+        "0xb8cf7872d92e5c503ec94d340b02456ce45dd6dbe30c09ac70f5f42a55af8f17",
+      ],
+      gasPrice: 2000000000,
     },
   },
 };
