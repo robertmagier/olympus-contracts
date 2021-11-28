@@ -340,20 +340,23 @@ describe("Deploy contract for Staking", () => {
     let lpBalance = new BN(
       (await rushv2weth.balanceOf(deployer.address)).toString()
     );
-    // await rushv2weth.transfer(treasury.address, lpBalance.toFixed());
+    await rushv2weth.transfer(
+      treasury.address,
+      lpBalance.times(0.9).integerValue().toFixed()
+    );
     await treasury.auditReserves();
     let reserves = await treasury.totalReserves();
     console.log("Reserves:", reserves / Math.pow(10, 9));
+    console.log("SRUSH Total Supply:", (await srush.totalSupply()).toString());
   });
-  return;
 
   it("Deploy OlympusBondDepository", async () => {
     let factory = await ethers.getContractFactory(
       "contracts/BondDepository.sol:OlympusBondDepository"
     );
     let instance = await factory.deploy(
-      ohm.address,
-      ohmdai.address,
+      rushv2.address,
+      rushv2weth.address,
       treasury.address,
       deployer.address,
       calculator.address
@@ -367,7 +370,7 @@ describe("Deploy contract for Staking", () => {
     await instance.setStaking(shelper.address, true);
 
     let controlVariable = 306;
-    let vestingTerm = 2000;
+    let vestingTerm = 10;
     let minimumPrice = 1;
     let maxPayout = 1000;
     let fee = 1000;
@@ -389,17 +392,32 @@ describe("Deploy contract for Staking", () => {
     let bondPrice = await instance.bondPrice();
     console.log(bondPrice.toString());
 
-    let reserves = await ohmdai.getReserves();
+    let reserves = await rushv2weth.getReserves();
     console.log("Reserves: ", reserves.toString());
 
     let bondPriceUSD = await instance.bondPriceInUSD();
     console.log(bondPriceUSD.toString());
 
-    let lpBalance = await ohmdai.balanceOf(deployer.address);
+    let lpBalance = await rushv2weth.balanceOf(deployer.address);
     console.log("LpBalance:", lpBalance.toString());
+    let amount = new BN(lpBalance.toString());
 
-    let amount = new BigNumber(10).shiftedBy(14).toFixed();
-    await ohmdai.approve(instance.address, amount);
-    await instance.deposit(amount, bondPrice, deployer.address);
+    await rushv2weth.approve(instance.address, amount.toFixed());
+    await instance.deposit(amount.toFixed(), bondPrice, deployer.address);
+
+    let bondInfo = await instance.bondInfo(deployer.address);
+    console.log("Payout:", bondInfo.payout.toString());
+    console.log("Vesting:", bondInfo.vesting.toString());
+    console.log("Last block:", bondInfo.lastBlock.toString());
+    console.log(
+      "Price[usd]:",
+      (bondInfo.pricePaid / Math.pow(10, 18)).toString()
+    );
+
+    await staking.rebase();
+    let percentVested = await instance.percentVestedFor(deployer.address);
+    console.log("Percent vested:", percentVested.toString());
+    let pending = await instance.pendingPayoutFor(deployer.address);
+    console.log("Pending:", pending.toString());
   });
 });
