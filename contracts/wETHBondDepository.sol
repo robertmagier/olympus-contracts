@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import "hardhat/console.sol";
 pragma solidity 0.7.5;
 
 interface IOwnable {
@@ -741,7 +742,7 @@ contract OlympusBondDepository is Ownable {
         uint _maxDebt,
         uint _initialDebt
     ) external onlyPolicy() {
-        require( currentDebt() == 0, "Debt must be 0 for initialization" );
+        require( terms.controlVariable == 0, "Bonds must be initialized from 0" );
         terms = Terms ({
             controlVariable: _controlVariable,
             vestingTerm: _vestingTerm,
@@ -845,8 +846,10 @@ contract OlympusBondDepository is Ownable {
 
         uint value = ITreasury( treasury ).valueOf( principle, _amount );
         uint payout = payoutFor( value ); // payout to bonder is computed
-
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
+        console.log('Min payout:',10000000);
+        console.log('Max payout:',maxPayout());
+        console.log('Payout:    ',payout);
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
 
         /**
@@ -983,6 +986,14 @@ contract OlympusBondDepository is Ownable {
      *  @return uint
      */
     function payoutFor( uint _value ) public view returns ( uint ) {
+        uint256 fraction = FixedPoint.fraction( _value, bondPrice() ).decode112with18();
+
+        uint price = bondPrice();
+        console.log('Value:',_value);
+        console.log('Bond Price:',price);
+        console.log('Fraction:',fraction);
+
+
         return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e14 );
     }
 

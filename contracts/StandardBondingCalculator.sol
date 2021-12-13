@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
 import "hardhat/console.sol";
+pragma solidity 0.7.5;
 library FullMath {
     function fullMul(uint256 x, uint256 y) private pure returns (uint256 l, uint256 h) {
         uint256 mm = mulmod(x, y, uint256(-1));
@@ -286,10 +286,9 @@ contract OlympusBondingCalculator is IBondingCalculator {
     }
 
     function valuation( address _pair, uint amount_ ) external view override returns ( uint _value ) {
+        console.log('Valuation');
         uint totalValue = getTotalValue( _pair );
         uint totalSupply = IUniswapV2Pair( _pair ).totalSupply();
-        console.log('Valuation:',totalValue,totalSupply,amount_);
-        console.log('Fraction:',FixedPoint.fraction( amount_, totalSupply ).decode112with18());
 
         _value = totalValue.mul( FixedPoint.fraction( amount_, totalSupply ).decode112with18() ).div( 1e18 );
     }

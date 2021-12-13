@@ -51,8 +51,8 @@ export default {
   networks: {
     hardhat: {
       mining: {
-        auto: true,
-        // interval: 1000,
+        // auto: false,
+        // interval: 0,
       },
     },
     rinkeby: {
