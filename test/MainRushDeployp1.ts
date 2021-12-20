@@ -33,7 +33,7 @@ const RATE = 100;
  * 4. Add liquidity - 10,000 RUSHv2 + 1 WETH
  */
 
-describe("Deploy contract for Staking", function () {
+describe("Deploy contract for RUSHV2", function () {
   this.timeout(0);
   let deployer: any,
     rushv2: any,
