@@ -78,12 +78,14 @@ describe("Deploy contract for RUSHV2", function () {
   });
 
   it("Set vault to deployer address", async () => {
-    await rushv2.setVault(deployer.address);
+    let tx = await rushv2.setVault(deployer.address);
+    await tx.wait();
   });
 
   it("Mint 100 000 000 RushV2 tokens", async () => {
     let amount = new BN("100000000").shiftedBy(9);
-    await rushv2.mint(deployer.address, amount.toString());
+    let tx = await rushv2.mint(deployer.address, amount.toString());
+    await tx.wait();
   });
 
   it("Verify deployer balance", async () => {
