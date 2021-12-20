@@ -869,7 +869,7 @@ contract VaultOwned is Ownable {
 
 }
 
-contract OlympusERC20Token is ERC20Permit, VaultOwned {
+contract RushERC20Token is ERC20Permit, VaultOwned {
 
     using SafeMath for uint256;
 

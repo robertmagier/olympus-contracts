@@ -7,6 +7,25 @@ const ZEROA = "0x0000000000000000000000000000000000000000";
 import { BigNumber } from "bignumber.js";
 
 const BN = BigNumber;
+
+var totalGas = new BN(0);
+
+async function CG(tx: any) {
+  let hash;
+  if (tx.deployTransaction) {
+    hash = tx.deployTransaction.hash;
+  } else {
+    hash = tx.hash;
+  }
+  let r = await ethers.provider.getTransactionReceipt(hash);
+  totalGas = totalGas.plus(r.gasUsed.toString());
+  console.log("Total Gas:", totalGas.toFormat());
+}
+function TG() {
+  let total = totalGas.shiftedBy(9).times(50);
+  console.log("Cost: ", total.shiftedBy(-18).toFormat(), " ETH");
+}
+
 var firstEpochBlock = 8961000;
 const firstEpochNumber = "338";
 const epochLengthInBlocks = "2200";
@@ -65,7 +84,6 @@ describe("Deploy contract for Staking", function () {
   it("Get signers", async () => {
     [deployer, DAO] = await ethers.getSigners();
     let block = await ethers.provider.getBlockNumber();
-    console.log("Last block:", block.toString());
     firstEpochBlock = block;
   });
 
@@ -77,32 +95,36 @@ describe("Deploy contract for Staking", function () {
     ERC20TOKEN = await ethers.getContractFactory("SimpleToken");
     dai = await ERC20TOKEN.deploy("DAI", "DAI", totalSupply);
     rushv1 = await ERC20TOKEN.deploy("RUSHV1", "RUSHV1", rushV1Total);
+    await CG(rushv1);
     frax = await ERC20TOKEN.deploy("FRAX", "FRAX", totalSupply);
   });
 
   it("Deploy RushV2 Token - rushV2", async () => {
     ERC20TOKEN = await ethers.getContractFactory("OlympusERC20Token");
     rushv2 = await ERC20TOKEN.deploy();
+    await CG(rushv2);
   });
 
   it("Deploy Standard Bond Calculator", async () => {
     CALCULATOR = await ethers.getContractFactory("OlympusBondingCalculator");
     calculator = await CALCULATOR.deploy(rushv2.address);
+    await CG(calculator);
   });
 
   it("Deploy UniswapPair", async () => {
     // Deploy Uniswap Factory
     UniswapFactory = await ethers.getContractFactory("UniswapFactory");
     uniswapfactory = await UniswapFactory.deploy(deployer.address);
+    // await CG(uniswapfactory);
     // Create Pair
     let tx = await uniswapfactory.createPair(rushv2.address, dai.address);
+    await CG(tx);
     await tx.wait();
     let pair = await uniswapfactory.getPair(rushv2.address, dai.address);
     let UNISWAPPAIR = await ethers.getContractFactory("UniswapPair");
     // Attach to pair
     rushv2dai = UNISWAPPAIR.attach(pair);
   });
-
   it("DEPLOY UNISWAP ROUTER", async () => {
     UNIROUTER = await ethers.getContractFactory("UniswapRouter");
     unirouter = await UNIROUTER.deploy(uniswapfactory.address, dai.address);
@@ -118,25 +140,30 @@ describe("Deploy contract for Staking", function () {
       rushv2dai.address,
       blocksNeededForQueue
     );
+    await CG(treasury);
   });
 
   it("Set bonding calculator for LP rushv2weth", async () => {
     const LIQUIDITYTOKEN_ENUM = 5;
     let tx = await treasury.queue(LIQUIDITYTOKEN_ENUM, rushv2dai.address);
+    await CG(tx);
     await tx.wait();
     tx = await treasury.toggle(
       LIQUIDITYTOKEN_ENUM,
       rushv2dai.address,
       calculator.address
     );
+    await CG(tx);
     await tx.wait();
     tx = await treasury.queue(LIQUIDITYTOKEN_ENUM, rushv2dai.address);
+    await CG(tx);
     await tx.wait();
     tx = await treasury.toggle(
       LIQUIDITYTOKEN_ENUM,
       rushv2dai.address,
       calculator.address
     );
+    await CG(tx);
     // await tx.wait();
   });
   it("Deploy Distributor", async () => {
@@ -148,19 +175,23 @@ describe("Deploy contract for Staking", function () {
       EPOCH_LENGTH,
       firstEpoch
     );
+    await CG(distributor);
   });
 
   it("Set distributor address in treasury as REWARD MANAGER", async () => {
     const REWARD_MANAGER_ENUM = 8;
     let tx = await treasury.queue(REWARD_MANAGER_ENUM, distributor.address);
+    await CG(tx);
     await tx.wait();
     tx = await treasury.toggle(REWARD_MANAGER_ENUM, distributor.address, ZEROA);
+    await CG(tx);
     await tx.wait();
   });
 
   it("Deploy sOHM token", async () => {
     sRUSH = await ethers.getContractFactory("sOlympus");
     srush = await sRUSH.deploy();
+    await CG(srush);
   });
 
   it("Deploy Rush Staking contract", async () => {
@@ -174,65 +205,79 @@ describe("Deploy contract for Staking", function () {
       FIRST_EPOCH,
       firstEpochBlock
     );
+    await CG(staking);
   });
 
   it("Set distributor address in staking contract", async () => {
     let tx = await staking.setContract(0, distributor.address);
+    await CG(tx);
     await tx.wait();
   });
 
   it("Add staking contract as a recipient in distrubtor contract", async () => {
     let tx = await distributor.addRecipient(staking.address, RATE);
+    await CG(tx);
     await tx.wait();
   });
 
   it("Set Vault on OHM token as treasury", async () => {
     let tx = await rushv2.setVault(treasury.address);
+    await CG(tx);
     await tx.wait();
   });
 
   it("Initialize sohm with Olympus Staking address", async () => {
     let tx = await srush.initialize(staking.address);
+    await CG(tx);
     await tx.wait();
   });
 
   it("Deploy WarmUp contract", async () => {
     WarmUp = await ethers.getContractFactory("StakingWarmup");
     warmup = await WarmUp.deploy(staking.address, srush.address);
+    await CG(warmup);
   });
 
   it("Configure warmup address in staking contract", async () => {
     const WARMUP_ENUM = 1;
     let tx = await staking.setContract(WARMUP_ENUM, warmup.address);
+    await CG(tx);
     await tx.wait();
   });
 
   it("Deploy Staking Helper", async () => {
     StakingHelper = await ethers.getContractFactory("StakingHelper");
     shelper = await StakingHelper.deploy(staking.address, rushv2.address);
+    await CG(shelper);
   });
 
   it("Add RUSHv1 token as a reserve token", async () => {
     const RESERVETOKEN = 2;
     let tx = await treasury.queue(RESERVETOKEN, rushv1.address);
+    await CG(tx);
     await tx.wait();
     tx = await treasury.toggle(RESERVETOKEN, rushv1.address, ZEROA);
+    await CG(tx);
     await tx.wait();
   });
 
   it("Add deployer as reserve depositor to treasury", async () => {
     const RESERVEDEPOSITOR = 0;
     let tx = await treasury.queue(RESERVEDEPOSITOR, deployer.address);
+    await CG(tx);
     await tx.wait();
     tx = await treasury.toggle(RESERVEDEPOSITOR, deployer.address, ZEROA);
+    await CG(tx);
     await tx.wait();
   });
 
   it("Deposit 100,000,000 RUSHV1 in exchange for 100,000,000 RUSHv2", async () => {
     let amount = new BN(100).shiftedBy(18 + 6);
     let tx = await rushv1.approve(treasury.address, amount.toFixed());
+    await CG(tx);
     await tx.wait();
     tx = await treasury.deposit(amount.toFixed(), rushv1.address, 0);
+    await CG(tx);
     await tx.wait();
   });
 
@@ -241,8 +286,10 @@ describe("Deploy contract for Staking", function () {
     let amountRushV2 = new BigNumber(100000).shiftedBy(9);
     let amountDAI = new BigNumber(20000).shiftedBy(18);
     let tx = await dai.approve(unirouter.address, amountDAI.toFixed(0));
+    await CG(tx);
     await tx.wait();
     tx = await rushv2.approve(unirouter.address, amountRushV2.toFixed(0));
+    await CG(tx);
     await tx.wait();
     tx = await unirouter.addLiquidity(
       rushv2.address,
@@ -254,6 +301,7 @@ describe("Deploy contract for Staking", function () {
       deployer.address,
       deadline
     );
+    await CG(tx);
     await tx.wait();
   });
 
@@ -266,8 +314,10 @@ describe("Deploy contract for Staking", function () {
       treasury.address,
       lpBalance.times(0.9).integerValue().toFixed()
     );
+    await CG(tx);
     await tx.wait();
     tx = await treasury.auditReserves();
+    await CG(tx);
     await tx.wait();
   });
 
@@ -282,14 +332,17 @@ describe("Deploy contract for Staking", function () {
       DAO.address,
       calculator.address
     );
-
+    await CG(bondDepository);
     const LP_DEPOSITOR = 4;
     let tx = await treasury.queue(LP_DEPOSITOR, bondDepository.address);
+    await CG(tx);
     await tx.wait();
     tx = await treasury.toggle(LP_DEPOSITOR, bondDepository.address, ZEROA);
+    await CG(tx);
     await tx.wait();
 
     tx = await bondDepository.setStaking(shelper.address, true);
+    await CG(tx);
     await tx.wait();
     let controlVariable = 100;
     let vestingTerm = 33110;
@@ -309,6 +362,7 @@ describe("Deploy contract for Staking", function () {
       maxDebt,
       initialDebt
     );
+    await CG(tx);
     await tx.wait();
     let debt = await bondDepository.totalDebt();
     console.log("Debt:", debt.toString());
@@ -359,5 +413,6 @@ describe("Deploy contract for Staking", function () {
     console.log("Staking Wawrmup " + warmup.address);
     console.log("RUSHV2DAI Bond: " + bondDepository.address);
     console.log("RUSHV2DAI Uniswap: " + rushv2dai.address);
+    TG();
   });
 });
